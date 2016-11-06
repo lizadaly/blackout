@@ -8,7 +8,7 @@ from PIL import Image, ImageDraw
 
 BOX_PADDING = 10
 
-def draw_horizontal_lines(draw, boxes, line_height, line_spacing):
+def draw_horizontal_lines(draw, boxes, doc_bounding_box, line_height, line_spacing):
     """Draw black horizontal lines across the page _except_ for that word"""
 
     gridline_height = line_height + (line_spacing * 2.0)
@@ -19,10 +19,12 @@ def draw_horizontal_lines(draw, boxes, line_height, line_spacing):
     for i in range(0, int(lines)):
         y = i * gridline_height
         start_y = y + line_spacing
+        if start_y < doc_bounding_box[1] or start_y > doc_bounding_box[3]:
+            continue
 
         # By default, start/end at total length of line
-        start_x = 0
-        end_x = img.size[0]
+        start_x = doc_bounding_box[0]
+        end_x = doc_bounding_box[2]
 
         # For each box, check if the box falls in the current line
         # Note: this will clobber boxes on the same line, OK for now
@@ -39,11 +41,11 @@ def draw_horizontal_lines(draw, boxes, line_height, line_spacing):
                     break
             if avoid_box:
                 # This is the line we're on, so we need two lines: before and after
-                start_x = 0
+                start_x = doc_bounding_box[0]
                 end_x = avoid_box.position[0][0] - BOX_PADDING
                 draw_line(draw, [start_x, start_y, end_x, start_y], line_height=line_height, boundary_index=2)
                 start_x = avoid_box.position[1][0] + BOX_PADDING
-                end_x = img.size[0]
+                end_x = doc_bounding_box[2]
                 draw_line(draw, [start_x, start_y, end_x, start_y], line_height=line_height, boundary_index=0)
                 skip_line = True
         if not skip_line:
@@ -97,8 +99,18 @@ if __name__ == '__main__':
 
     # Get the line height by taking the average of all the box heights
     box_heights = []
+    margin_lefts = []
+    margin_rights = []
+    margin_top = boxes[0].position[0][1]
+    margin_bottom = boxes[-1].position[1][1]
+
     for box in boxes:
+        margin_lefts.append(box.position[0][0])
+        margin_rights.append(box.position[1][0])
         box_heights.append(box.position[1][1] - box.position[0][1])
+
+    margin_left = min(margin_lefts)
+    margin_right = max(margin_rights)
 
     line_height = mean(box_heights)
     line_spaces = [0]
@@ -112,5 +124,7 @@ if __name__ == '__main__':
     draw = ImageDraw.Draw(img)
 
     select_boxes = [boxes[10], boxes[30], boxes[200]]
-    draw_horizontal_lines(draw, select_boxes, line_height=line_height, line_spacing=line_spacing)
+    draw_horizontal_lines(draw, select_boxes,
+                          doc_bounding_box=(margin_left, margin_top, margin_right, margin_bottom),
+                          line_height=line_height, line_spacing=line_spacing)
     img.save("out.png")
