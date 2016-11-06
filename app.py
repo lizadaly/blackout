@@ -27,7 +27,7 @@ def draw_horizontal_lines(draw, boxes, line_height, line_spacing):
         skip_line = False
 
         for box in boxes:
-            if y >= box.position[0][1] and y <= box.position[1][1]:
+            if y >= box.position[0][1] and y + line_height + line_spacing <= box.position[1][1]:
                 # This is the line we're on, so we need two lines: before and after
                 start_x = 0
                 end_x = box.position[0][0]
