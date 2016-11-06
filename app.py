@@ -8,6 +8,35 @@ from PIL import Image, ImageDraw
 
 BOX_PADDING = 10
 
+def draw_vertical_lines(draw, boxes, doc_bounding_box, line_height, line_spacing):
+
+    current_x = doc_bounding_box[0]
+    while current_x < doc_bounding_box[2]:
+        start_x = current_x
+        start_y = doc_bounding_box[1]
+        end_x = start_x
+        end_y = doc_bounding_box[3]
+        skip_line = False
+        for i, b in enumerate(boxes):
+            avoid_boxes = []
+            last_box = boxes[i-1]
+            this_box = boxes[i]
+            check_boxes = [boxes[i-1], boxes[i]]
+            for box in check_boxes:
+                if start_x >= box.position[0][0] - line_height - (line_spacing * 2) and \
+                    start_x <= box.position[1][0] + line_height + (line_spacing * 2):
+                        avoid_boxes.append(box)
+            for avoid_box in avoid_boxes:
+                draw_line(draw, [start_x, start_y, start_x, avoid_box.position[0][1] - BOX_PADDING], line_height=line_height, boundary_index=3)
+                draw_line(draw, [start_x, avoid_box.position[1][1] + BOX_PADDING, start_x, end_y], line_height=line_height, boundary_index=1)
+                skip_line = True
+        if not skip_line:
+            draw_line(draw, [start_x, start_y, end_x, end_y], line_height=line_height)
+        current_x = start_x + line_height + (line_spacing * 2)
+
+    for box in boxes:
+        draw.rectangle(box.position, outline=(255, 0, 0))
+
 def draw_horizontal_lines(draw, boxes, doc_bounding_box, line_height, line_spacing):
     """Draw black horizontal lines across the page _except_ for that word"""
 
@@ -51,8 +80,6 @@ def draw_horizontal_lines(draw, boxes, doc_bounding_box, line_height, line_spaci
         if not skip_line:
             draw_line(draw, [start_x, start_y, end_x, start_y], line_height=line_height)
 
-#    for box in boxes:
-#        draw.rectangle(box.position, outline=(255, 0, 0))
 
 def draw_line(draw, pos, line_height, boundary_index=None):
     # Draw a fuzzy line of randomish width repeat times
@@ -62,13 +89,18 @@ def draw_line(draw, pos, line_height, boundary_index=None):
 
     for i in range(0, repeat):
         width = random.randrange(line_height - (default_padding * 2), line_height)
+
         if boundary_index == 0:
             padding = 0.1
         else:
             padding = default_padding
+
         pos[0] = random.uniform(pos[0] - padding, pos[0] + padding)
 
-        padding = default_padding
+        if boundary_index == 1:
+            padding = 0.1
+        else:
+            padding = default_padding
         pos[1] = random.uniform(pos[1] - padding, pos[1] + padding)
 
         if boundary_index == 2:
@@ -77,7 +109,10 @@ def draw_line(draw, pos, line_height, boundary_index=None):
             padding = default_padding
         pos[2] = random.uniform(pos[2] - padding, pos[2] + padding)
 
-        padding = default_padding
+        if boundary_index == 3:
+            padding = 0.1
+        else:
+            padding = default_padding
         pos[3] = random.uniform(pos[3] - padding, pos[3] + padding)
 
         opacity = 200 + i
@@ -124,7 +159,10 @@ if __name__ == '__main__':
     draw = ImageDraw.Draw(img)
 
     select_boxes = [boxes[10], boxes[30], boxes[200]]
-    draw_horizontal_lines(draw, select_boxes,
-                          doc_bounding_box=(margin_left, margin_top, margin_right, margin_bottom),
-                          line_height=line_height, line_spacing=line_spacing)
+    doc_bounding_box = (margin_left, margin_top, margin_right, margin_bottom)
+
+#    draw_horizontal_lines(draw, select_boxes,
+#                          doc_bounding_box=doc_bounding_box,
+#                          line_height=line_height, line_spacing=line_spacing)
+    draw_vertical_lines(draw, select_boxes, doc_bounding_box=doc_bounding_box, line_height=line_height, line_spacing=line_spacing)
     img.save("out.png")
