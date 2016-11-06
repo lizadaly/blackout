@@ -1,0 +1,4 @@
+pyocr
+pillow
+spacy
+git+https://github.com/aparrish/pytracery.git#egg=tracery
