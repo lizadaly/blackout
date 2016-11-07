@@ -10,28 +10,38 @@ BOX_PADDING = 10
 
 def draw_vertical_lines(draw, boxes, doc_bounding_box, line_height, line_spacing):
 
-    current_x = doc_bounding_box[0]
+    current_x = doc_bounding_box[0] + line_height / 2
+    found_letter = False
+    color = (0, 0, 0)
     while current_x < doc_bounding_box[2]:
         start_x = current_x
         start_y = doc_bounding_box[1]
         end_x = start_x
-        end_y = doc_bounding_box[3]
+        end_y = doc_bounding_box[3] - line_height / 2
         skip_line = False
-        for i, b in enumerate(boxes):
-            avoid_boxes = []
-            last_box = boxes[i-1]
-            this_box = boxes[i]
-            check_boxes = [boxes[i-1], boxes[i]]
-            for box in check_boxes:
-                if start_x >= box.position[0][0] - line_height - (line_spacing * 2) and \
-                    start_x <= box.position[1][0] + line_height + (line_spacing * 2):
-                        avoid_boxes.append(box)
-            for avoid_box in avoid_boxes:
-                draw_line(draw, [start_x, start_y, start_x, avoid_box.position[0][1] - BOX_PADDING], line_height=line_height, boundary_index=3)
-                draw_line(draw, [start_x, avoid_box.position[1][1] + BOX_PADDING, start_x, end_y], line_height=line_height, boundary_index=1)
-                skip_line = True
-        if not skip_line:
-            draw_line(draw, [start_x, start_y, end_x, end_y], line_height=line_height)
+
+        bx0 = start_x
+        bx1 = start_x + line_height + (line_spacing * 2)
+
+        select_boxes = []
+        for box in boxes:
+            wx0 = box.position[0][0]
+            wx1 = box.position[1][0]
+            if bx0 < wx0 and wx1 < bx1 or \
+               wx0 < bx1 and bx1 < wx1 or \
+               wx0 < bx0 and bx0 < wx1:
+                select_boxes.append(box)
+
+        if select_boxes:
+            y = start_y
+            for box in select_boxes:
+                end_y = box.position[0][1] - BOX_PADDING
+                draw_line(draw, [start_x, y, start_x, end_y], line_height=line_height, boundary_index=3)
+                y = box.position[1][1] + BOX_PADDING
+            draw_line(draw, [start_x, y + BOX_PADDING, start_x, doc_bounding_box[3]], line_height=line_height, boundary_index=3)
+        else:
+           draw_line(draw, [start_x, start_y, end_x, end_y], line_height=line_height, color=color, wobble_max=1)
+
         current_x = start_x + line_height + (line_spacing * 2)
 
     for box in boxes:
@@ -81,14 +91,14 @@ def draw_horizontal_lines(draw, boxes, doc_bounding_box, line_height, line_spaci
             draw_line(draw, [start_x, start_y, end_x, start_y], line_height=line_height)
 
 
-def draw_line(draw, pos, line_height, boundary_index=None):
+def draw_line(draw, pos, line_height, boundary_index=None, color=(0, 0, 0), wobble_max=5):
     # Draw a fuzzy line of randomish width repeat times
     repeat = 50
     line_height = int(line_height)
-    default_padding = BOX_PADDING / 5 if boundary_index else BOX_PADDING
+    default_padding = min([BOX_PADDING / wobble_max if boundary_index else BOX_PADDING, wobble_max])
 
     for i in range(0, repeat):
-        width = random.randrange(line_height - (default_padding * 2), line_height)
+        width = int(random.uniform(line_height - (default_padding * 2.0), line_height))
 
         if boundary_index == 0:
             padding = 0.1
@@ -116,7 +126,7 @@ def draw_line(draw, pos, line_height, boundary_index=None):
         pos[3] = random.uniform(pos[3] - padding, pos[3] + padding)
 
         opacity = 200 + i
-        draw.line(pos, width=width, fill=(0, 0, 0, opacity))
+        draw.line(pos, width=width, fill=(*color, opacity))
 
 def get_boxes(imagefile):
     num_words = 5
@@ -161,8 +171,8 @@ if __name__ == '__main__':
     select_boxes = [boxes[10], boxes[30], boxes[200]]
     doc_bounding_box = (margin_left, margin_top, margin_right, margin_bottom)
 
-#    draw_horizontal_lines(draw, select_boxes,
-#                          doc_bounding_box=doc_bounding_box,
-#                          line_height=line_height, line_spacing=line_spacing)
+    draw_horizontal_lines(draw, select_boxes,
+                          doc_bounding_box=doc_bounding_box,
+                          line_height=line_height, line_spacing=line_spacing)
     draw_vertical_lines(draw, select_boxes, doc_bounding_box=doc_bounding_box, line_height=line_height, line_spacing=line_spacing)
     img.save("out.png")
