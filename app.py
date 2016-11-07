@@ -170,9 +170,9 @@ if __name__ == '__main__':
 
     select_boxes = [boxes[10], boxes[30], boxes[200]]
     doc_bounding_box = (margin_left, margin_top, margin_right, margin_bottom)
-
+    draw_vertical_lines(draw, select_boxes, doc_bounding_box=doc_bounding_box, line_height=line_height, line_spacing=line_spacing)
     draw_horizontal_lines(draw, select_boxes,
                           doc_bounding_box=doc_bounding_box,
                           line_height=line_height, line_spacing=line_spacing)
-    draw_vertical_lines(draw, select_boxes, doc_bounding_box=doc_bounding_box, line_height=line_height, line_spacing=line_spacing)
+
     img.save("out.png")
