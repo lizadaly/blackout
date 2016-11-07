@@ -44,8 +44,8 @@ def draw_vertical_lines(draw, boxes, doc_bounding_box, line_height, line_spacing
 
         current_x = start_x + line_height + (line_spacing * 2)
 
-    for box in boxes:
-        draw.rectangle(box.position, outline=(255, 0, 0))
+#    for box in boxes:
+#        draw.rectangle(box.position, outline=(255, 0, 0))
 
 def draw_horizontal_lines(draw, boxes, doc_bounding_box, line_height, line_spacing):
     """Draw black horizontal lines across the page _except_ for that word"""
@@ -164,8 +164,9 @@ if __name__ == '__main__':
     # Line spacing is 10% of line_height
     line_spacing = line_height * .1
 
-    img = Image.open(imagefile)
-    img = img.convert('RGBA')
+    src = Image.open(imagefile)
+    src = src.convert('RGBA')
+    img = Image.new('RGBA', (src.size[0], src.size[1]))
     draw = ImageDraw.Draw(img)
 
     select_boxes = [boxes[10], boxes[30], boxes[200]]
@@ -175,4 +176,5 @@ if __name__ == '__main__':
                           doc_bounding_box=doc_bounding_box,
                           line_height=line_height, line_spacing=line_spacing)
 
-    img.save("out.png")
+    out = Image.alpha_composite(src, img)
+    out.save("out.png")
