@@ -8,20 +8,20 @@ from PIL import Image, ImageDraw
 
 BOX_PADDING = 10
 
-def draw_vertical_lines(draw, boxes, doc_bounding_box, line_height, line_spacing):
+def draw_vertical_lines(draw, boxes, doc_bounding_box, line_width, line_spacing):
 
-    current_x = doc_bounding_box[0] + line_height / 2
+    current_x = doc_bounding_box[0] + line_width / 2
     found_letter = False
     color = (0, 0, 0)
     while current_x < doc_bounding_box[2]:
         start_x = current_x
         start_y = doc_bounding_box[1]
         end_x = start_x
-        end_y = doc_bounding_box[3] - line_height / 2
+        end_y = doc_bounding_box[3] - line_width / 2
         skip_line = False
 
         bx0 = start_x
-        bx1 = start_x + line_height + (line_spacing * 2)
+        bx1 = start_x + line_width + (line_spacing * 2)
 
         select_boxes = []
         for box in boxes:
@@ -36,27 +36,27 @@ def draw_vertical_lines(draw, boxes, doc_bounding_box, line_height, line_spacing
             y = start_y
             for box in select_boxes:
                 end_y = box.position[0][1] - BOX_PADDING
-                draw_line(draw, [start_x, y, start_x, end_y], line_height=line_height, boundary_index=3)
+                draw_line(draw, [start_x, y, start_x, end_y], line_width=line_width, boundary_index=3)
                 y = box.position[1][1] + BOX_PADDING
-            draw_line(draw, [start_x, y + BOX_PADDING, start_x, doc_bounding_box[3]], line_height=line_height, boundary_index=3)
+            draw_line(draw, [start_x, y + BOX_PADDING, start_x, doc_bounding_box[3]], line_width=line_width, boundary_index=3)
         else:
-           draw_line(draw, [start_x, start_y, end_x, end_y], line_height=line_height, color=color, wobble_max=1)
+           draw_line(draw, [start_x, start_y, end_x, end_y], line_width=line_width, color=color, wobble_max=1)
 
-        current_x = start_x + line_height + (line_spacing * 2)
+        current_x = start_x + line_width + (line_spacing * 2)
 
 #    for box in boxes:
 #        draw.rectangle(box.position, outline=(255, 0, 0))
 
-def draw_horizontal_lines(draw, boxes, doc_bounding_box, line_height, line_spacing):
+def draw_horizontal_lines(draw, boxes, doc_bounding_box, line_width, line_spacing):
     """Draw black horizontal lines across the page _except_ for that word"""
 
-    gridline_height = line_height + (line_spacing * 2.0)
+    gridline_width = line_width + (line_spacing * 2.0)
 
     # Set up the grid
-    lines = img.size[1] / gridline_height
+    lines = img.size[1] / gridline_width
 
     for i in range(0, int(lines)):
-        y = i * gridline_height
+        y = i * gridline_width
         start_y = y + line_spacing
         if start_y < doc_bounding_box[1] or start_y > doc_bounding_box[3]:
             continue
@@ -74,31 +74,31 @@ def draw_horizontal_lines(draw, boxes, doc_bounding_box, line_height, line_spaci
             last_box = boxes[i-1]
             this_box = boxes[i]
             for box in (this_box, last_box):
-                if box.position[0][1] + BOX_PADDING > y - (gridline_height * 1.2) and box.position[1][1] - BOX_PADDING < y + (gridline_height * 1.2):
-#                    box.position[1][1] > y and box.position[1][1] < y + (gridline_height * 2):
+                if box.position[0][1] + BOX_PADDING > y - (gridline_width * 1.2) and box.position[1][1] - BOX_PADDING < y + (gridline_width * 1.2):
+#                    box.position[1][1] > y and box.position[1][1] < y + (gridline_width * 2):
                     avoid_box = box
                     break
             if avoid_box:
                 # This is the line we're on, so we need two lines: before and after
                 start_x = doc_bounding_box[0]
                 end_x = avoid_box.position[0][0] - BOX_PADDING
-                draw_line(draw, [start_x, start_y, end_x, start_y], line_height=line_height, boundary_index=2)
+                draw_line(draw, [start_x, start_y, end_x, start_y], line_width=line_width, boundary_index=2)
                 start_x = avoid_box.position[1][0] + BOX_PADDING
                 end_x = doc_bounding_box[2]
-                draw_line(draw, [start_x, start_y, end_x, start_y], line_height=line_height, boundary_index=0)
+                draw_line(draw, [start_x, start_y, end_x, start_y], line_width=line_width, boundary_index=0)
                 skip_line = True
         if not skip_line:
-            draw_line(draw, [start_x, start_y, end_x, start_y], line_height=line_height)
+            draw_line(draw, [start_x, start_y, end_x, start_y], line_width=line_width)
 
 
-def draw_line(draw, pos, line_height, boundary_index=None, color=(0, 0, 0), wobble_max=5):
+def draw_line(draw, pos, line_width, boundary_index=None, color=(0, 0, 0), wobble_max=5):
     # Draw a fuzzy line of randomish width repeat times
     repeat = 50
-    line_height = int(line_height)
+    line_width = int(line_width) * .20
     default_padding = min([BOX_PADDING / wobble_max if boundary_index else BOX_PADDING, wobble_max])
 
     for i in range(0, repeat):
-        width = int(random.uniform(line_height - (default_padding * 2.0), line_height))
+        width = int(random.uniform(line_width - (default_padding * 2.0), line_width))
 
         if boundary_index == 0:
             padding = 0.1
@@ -139,7 +139,7 @@ def get_boxes(imagefile):
 if __name__ == '__main__':
     tool = pyocr.get_available_tools()[0]
     lang = tool.get_available_languages()[0]
-    imagefile = 'data/books/small_0000.jpg'
+    imagefile = 'data/books/small_0000.png'
     boxes = get_boxes(imagefile)
 
     # Get the line height by taking the average of all the box heights
@@ -157,12 +157,12 @@ if __name__ == '__main__':
     margin_left = min(margin_lefts)
     margin_right = max(margin_rights)
 
-    line_height = mean(box_heights)
+    line_width = mean(box_heights)
     line_spaces = [0]
     last_y_pos = boxes[0].position[1][1]
 
-    # Line spacing is 10% of line_height
-    line_spacing = line_height * .1
+    # Line spacing is 10% of line_width
+    line_spacing = line_width * .1
 
     src = Image.open(imagefile)
     src = src.convert('RGBA')
@@ -171,10 +171,15 @@ if __name__ == '__main__':
 
     select_boxes = [boxes[10], boxes[30], boxes[200]]
     doc_bounding_box = (margin_left, margin_top, margin_right, margin_bottom)
-    draw_vertical_lines(draw, select_boxes, doc_bounding_box=doc_bounding_box, line_height=line_height, line_spacing=line_spacing)
+    draw_vertical_lines(draw, select_boxes, doc_bounding_box=doc_bounding_box, line_width=line_width, line_spacing=line_spacing)
     draw_horizontal_lines(draw, select_boxes,
                           doc_bounding_box=doc_bounding_box,
-                          line_height=line_height, line_spacing=line_spacing)
+                          line_width=line_width, line_spacing=line_spacing)
+
 
     out = Image.alpha_composite(src, img)
-    out.save("out.png")
+    final = Image.new('RGBA', (src.size[0], src.size[1]))
+    canvas = ImageDraw.Draw(final)
+    canvas.rectangle([0, 0, final.size[0], final.size[1]], fill='white')
+    final = Image.alpha_composite(final, out)
+    final.save("out.png")
