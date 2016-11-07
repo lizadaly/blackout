@@ -4,12 +4,12 @@ from statistics import mean
 
 import pyocr
 import pyocr.builders
-from PIL import Image, ImageDraw
+from PIL import Image, ImageDraw, ImageFilter
 
 BOX_PADDING = 10
 
 def draw_vertical_lines(draw, boxes, doc_bounding_box, line_width, line_spacing):
-
+    line_weight_factor = random.choice([1, 1, 1, 1, 0.02, 0.05, 0.07, 0.1, 0.2])
     current_x = doc_bounding_box[0] + line_width / 2
     found_letter = False
     color = (0, 0, 0)
@@ -36,11 +36,11 @@ def draw_vertical_lines(draw, boxes, doc_bounding_box, line_width, line_spacing)
             y = start_y
             for box in select_boxes:
                 end_y = box.position[0][1] - BOX_PADDING
-                draw_line(draw, [start_x, y, start_x, end_y], line_width=line_width, boundary_index=3)
+                draw_line(draw, [start_x, y, start_x, end_y], line_width=line_width, boundary_index=3, line_weight_factor=line_weight_factor)
                 y = box.position[1][1] + BOX_PADDING
-            draw_line(draw, [start_x, y + BOX_PADDING, start_x, doc_bounding_box[3]], line_width=line_width, boundary_index=3)
+            draw_line(draw, [start_x, y + BOX_PADDING, start_x, doc_bounding_box[3]], line_width=line_width, boundary_index=3, line_weight_factor=line_weight_factor)
         else:
-           draw_line(draw, [start_x, start_y, end_x, end_y], line_width=line_width, color=color, wobble_max=1)
+           draw_line(draw, [start_x, start_y, end_x, end_y], line_width=line_width, color=color, wobble_max=1, line_weight_factor=line_weight_factor)
 
         current_x = start_x + line_width + (line_spacing * 2)
 
@@ -49,6 +49,8 @@ def draw_vertical_lines(draw, boxes, doc_bounding_box, line_width, line_spacing)
 
 def draw_horizontal_lines(draw, boxes, doc_bounding_box, line_width, line_spacing):
     """Draw black horizontal lines across the page _except_ for that word"""
+
+    line_weight_factor = random.choice([1, 1, 1, 1, 0.02, 0.05, 0.07, 0.1, 0.2])
 
     gridline_width = line_width + (line_spacing * 2.0)
 
@@ -82,19 +84,19 @@ def draw_horizontal_lines(draw, boxes, doc_bounding_box, line_width, line_spacin
                 # This is the line we're on, so we need two lines: before and after
                 start_x = doc_bounding_box[0]
                 end_x = avoid_box.position[0][0] - BOX_PADDING
-                draw_line(draw, [start_x, start_y, end_x, start_y], line_width=line_width, boundary_index=2)
+                draw_line(draw, [start_x, start_y, end_x, start_y], line_width=line_width, boundary_index=2, line_weight_factor=line_weight_factor)
                 start_x = avoid_box.position[1][0] + BOX_PADDING
                 end_x = doc_bounding_box[2]
-                draw_line(draw, [start_x, start_y, end_x, start_y], line_width=line_width, boundary_index=0)
+                draw_line(draw, [start_x, start_y, end_x, start_y], line_width=line_width, boundary_index=0, line_weight_factor=line_weight_factor)
                 skip_line = True
         if not skip_line:
-            draw_line(draw, [start_x, start_y, end_x, start_y], line_width=line_width)
+            draw_line(draw, [start_x, start_y, end_x, start_y], line_width=line_width, line_weight_factor=line_weight_factor)
 
 
-def draw_line(draw, pos, line_width, boundary_index=None, color=(0, 0, 0), wobble_max=5):
+def draw_line(draw, pos, line_width, boundary_index=None, color=(0, 0, 0), wobble_max=5, line_weight_factor=1):
     # Draw a fuzzy line of randomish width repeat times
     repeat = 50
-    line_width = int(line_width) * .20
+    line_width = int(line_width) * line_weight_factor
     default_padding = min([BOX_PADDING / wobble_max if boundary_index else BOX_PADDING, wobble_max])
 
     for i in range(0, repeat):
@@ -135,6 +137,14 @@ def get_boxes(imagefile):
         builder=pyocr.builders.WordBoxBuilder()
     )
     return boxes
+
+def image_filter(img):
+    img = img.filter(ImageFilter.SMOOTH_MORE)
+    img = img.filter(ImageFilter.SMOOTH_MORE)
+    img = img.filter(ImageFilter.SMOOTH_MORE)
+#    img = img.filter(ImageFilter.GaussianBlur(radius=2))
+
+    return img
 
 if __name__ == '__main__':
     tool = pyocr.get_available_tools()[0]
@@ -177,6 +187,8 @@ if __name__ == '__main__':
                           line_width=line_width, line_spacing=line_spacing)
 
 
+
+    img = image_filter(img)
     out = Image.alpha_composite(src, img)
     final = Image.new('RGBA', (src.size[0], src.size[1]))
     canvas = ImageDraw.Draw(final)
