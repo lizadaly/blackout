@@ -1,12 +1,16 @@
 import random
 from statistics import mean
+import string
 
+import tracery
+import spacy
 
 import pyocr
 import pyocr.builders
 from PIL import Image, ImageDraw, ImageFilter
 
 BOX_PADDING = 10
+
 
 def draw_vertical_lines(draw, boxes, doc_bounding_box, line_width, line_spacing):
     line_weight_factor = random.choice([1, 1, 1, 1, 0.02, 0.05, 0.07, 0.1, 0.2])
@@ -142,15 +146,50 @@ def image_filter(img):
     img = img.filter(ImageFilter.SMOOTH_MORE)
     img = img.filter(ImageFilter.SMOOTH_MORE)
     img = img.filter(ImageFilter.SMOOTH_MORE)
-#    img = img.filter(ImageFilter.GaussianBlur(radius=2))
-
     return img
+
+
+def parse_words(boxes):
+    words = []
+    word_box = {}
+    for box in boxes:
+        word = box.content.strip()
+        word = word.translate(str.maketrans({a:None for a in string.punctuation}))
+        words.append(word)
+        word_box[word] = box
+    sent = ' '.join(words)
+    doc = nlp(sent)
+    for token in doc:
+        if token.text in word_box:
+            word_box[token.text].pos = token.pos_
+    return words, word_box
+
+def find_boxes_for_grammar(boxes):
+    words, word_box = parse_words(boxes)
+    grammar = ['DET', 'NOUN', 'VERB']
+    picks = []
+    word_index = 0
+    for pos in grammar:
+        while True:
+            word = words[word_index]
+            if word_box[word].pos == pos:
+                print("Picking ", word)
+                picks.append(word_box[word])
+                break
+            else:
+                word_index += 1
+    return picks
 
 if __name__ == '__main__':
     tool = pyocr.get_available_tools()[0]
     lang = tool.get_available_languages()[0]
-    imagefile = 'data/books/small_0000.png'
+    imagefile = 'data/books/vindication/0046.png'
     boxes = get_boxes(imagefile)
+
+    nlp = spacy.load('en')
+
+    select_boxes = find_boxes_for_grammar(boxes)
+
 
     # Get the line height by taking the average of all the box heights
     box_heights = []
@@ -179,7 +218,7 @@ if __name__ == '__main__':
     img = Image.new('RGBA', (src.size[0], src.size[1]))
     draw = ImageDraw.Draw(img)
 
-    select_boxes = [boxes[10], boxes[30], boxes[200]]
+
     doc_bounding_box = (margin_left, margin_top, margin_right, margin_bottom)
     draw_vertical_lines(draw, select_boxes, doc_bounding_box=doc_bounding_box, line_width=line_width, line_spacing=line_spacing)
     draw_horizontal_lines(draw, select_boxes,
