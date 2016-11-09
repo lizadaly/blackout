@@ -15,14 +15,12 @@ BOX_PADDING = 10
 def draw_vertical_lines(draw, boxes, doc_bounding_box, line_width, line_spacing):
     line_weight_factor = random.choice([1, 1, 1, 1, 0.02, 0.05, 0.07, 0.1, 0.2])
     current_x = doc_bounding_box[0] + line_width / 2
-    found_letter = False
     color = (0, 0, 0)
     while current_x < doc_bounding_box[2]:
         start_x = current_x
         start_y = doc_bounding_box[1]
         end_x = start_x
         end_y = doc_bounding_box[3] - line_width / 2
-        skip_line = False
 
         bx0 = start_x
         bx1 = start_x + line_width + (line_spacing * 2)
@@ -40,9 +38,9 @@ def draw_vertical_lines(draw, boxes, doc_bounding_box, line_width, line_spacing)
             y = start_y
             for box in select_boxes:
                 end_y = box.position[0][1] - BOX_PADDING
-                draw_line(draw, [start_x, y, start_x, end_y], line_width=line_width, boundary_index=3, line_weight_factor=line_weight_factor)
+                draw_line(draw, [start_x, y, start_x, end_y], line_width=line_width, boundary_index=0, line_weight_factor=line_weight_factor)
                 y = box.position[1][1] + BOX_PADDING
-            draw_line(draw, [start_x, y + BOX_PADDING, start_x, doc_bounding_box[3]], line_width=line_width, boundary_index=3, line_weight_factor=line_weight_factor)
+            draw_line(draw, [start_x, y + BOX_PADDING, start_x, doc_bounding_box[3]], line_width=line_width, boundary_index=0, line_weight_factor=line_weight_factor)
         else:
            draw_line(draw, [start_x, start_y, end_x, end_y], line_width=line_width, color=color, wobble_max=1, line_weight_factor=line_weight_factor)
 
@@ -54,53 +52,46 @@ def draw_vertical_lines(draw, boxes, doc_bounding_box, line_width, line_spacing)
 def draw_horizontal_lines(draw, boxes, doc_bounding_box, line_width, line_spacing):
     """Draw black horizontal lines across the page _except_ for that word"""
 
-    line_weight_factor = random.choice([1, 1, 1, 1, 0.02, 0.05, 0.07, 0.1, 0.2])
+    line_weight_factor = random.choice([1, 1, 1, 1, 0.1, 0.2])
+    color = (0, 0, 0)
+    current_y = doc_bounding_box[1] + line_width / 2
 
-    gridline_width = line_width + (line_spacing * 2.0)
-
-    # Set up the grid
-    lines = img.size[1] / gridline_width
-
-    for i in range(0, int(lines)):
-        y = i * gridline_width
-        start_y = y + line_spacing
-        if start_y < doc_bounding_box[1] or start_y > doc_bounding_box[3]:
-            continue
-
-        # By default, start/end at total length of line
+    while current_y < doc_bounding_box[3]:
         start_x = doc_bounding_box[0]
+        start_y = current_y
+
         end_x = doc_bounding_box[2]
+        end_y = doc_bounding_box[3] - line_width / 2
 
-        # For each box, check if the box falls in the current line
-        # Note: this will clobber boxes on the same line, OK for now
-        skip_line = False
+        by0 = start_y
+        by1 = start_y + line_width + (line_spacing * 2)
 
-        for i, b in enumerate(boxes):
-            avoid_box = None
-            last_box = boxes[i-1]
-            this_box = boxes[i]
-            for box in (this_box, last_box):
-                if box.position[0][1] + BOX_PADDING > y - (gridline_width * 1.2) and box.position[1][1] - BOX_PADDING < y + (gridline_width * 1.2):
-#                    box.position[1][1] > y and box.position[1][1] < y + (gridline_width * 2):
-                    avoid_box = box
-                    break
-            if avoid_box:
-                # This is the line we're on, so we need two lines: before and after
-                start_x = doc_bounding_box[0]
-                end_x = avoid_box.position[0][0] - BOX_PADDING
-                draw_line(draw, [start_x, start_y, end_x, start_y], line_width=line_width, boundary_index=2, line_weight_factor=line_weight_factor)
-                start_x = avoid_box.position[1][0] + BOX_PADDING
-                end_x = doc_bounding_box[2]
-                draw_line(draw, [start_x, start_y, end_x, start_y], line_width=line_width, boundary_index=0, line_weight_factor=line_weight_factor)
-                skip_line = True
-        if not skip_line:
-            draw_line(draw, [start_x, start_y, end_x, start_y], line_width=line_width, line_weight_factor=line_weight_factor)
+        select_boxes = []
+        for box in boxes:
+            wy0 = box.position[0][1]
+            wy1 = box.position[1][1]
+            if by0 < wy0 and wy1 < by1 or \
+               wy0 < by1 and by1 < wy1 or \
+               wy0 < by0 and by0 < wy1:
+                select_boxes.append(box)
+
+        if select_boxes:
+            x = start_x
+            for box in select_boxes:
+                end_x = box.position[0][0] - BOX_PADDING
+                draw_line(draw, [x, start_y, end_x, start_y], line_width=line_width, boundary_index=3, line_weight_factor=line_weight_factor)
+                x = box.position[1][0] + BOX_PADDING
+            draw_line(draw, [x + BOX_PADDING, start_y, doc_bounding_box[2], start_y], line_width=line_width, boundary_index=3, line_weight_factor=line_weight_factor)
+        else:
+           draw_line(draw, [start_x, start_y, end_x, start_y], line_width=line_width, color=color, wobble_max=1, line_weight_factor=line_weight_factor)
+
+        current_y = start_y + line_width + (line_spacing * 2)
 
 
 def draw_line(draw, pos, line_width, boundary_index=None, color=(0, 0, 0), wobble_max=5, line_weight_factor=1):
     # Draw a fuzzy line of randomish width repeat times
     repeat = 50
-    line_width = int(line_width) * line_weight_factor
+    width = int(line_width) * line_weight_factor
     default_padding = min([BOX_PADDING / wobble_max if boundary_index else BOX_PADDING, wobble_max])
 
     for i in range(0, repeat):
@@ -220,7 +211,7 @@ if __name__ == '__main__':
 
 
     doc_bounding_box = (margin_left, margin_top, margin_right, margin_bottom)
-    draw_vertical_lines(draw, select_boxes, doc_bounding_box=doc_bounding_box, line_width=line_width, line_spacing=line_spacing)
+#    draw_vertical_lines(draw, select_boxes, doc_bounding_box=doc_bounding_box, line_width=line_width, line_spacing=line_spacing)
     draw_horizontal_lines(draw, select_boxes,
                           doc_bounding_box=doc_bounding_box,
                           line_width=line_width, line_spacing=line_spacing)
