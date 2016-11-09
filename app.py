@@ -51,46 +51,53 @@ def draw_vertical_lines(draw, boxes, doc_bounding_box, line_width, line_spacing)
 
 def draw_horizontal_lines(draw, boxes, doc_bounding_box, line_width, line_spacing):
     """Draw black horizontal lines across the page _except_ for that word"""
-
     line_weight_factor = random.choice([1, 1, 1, 1, 0.1, 0.2])
     color = (0, 0, 0)
-    current_y = doc_bounding_box[1] + line_width / 2
+
+    start_x = doc_bounding_box[0]
+    current_y = doc_bounding_box[1] 
+    end_x = doc_bounding_box[2]
+    end_y = doc_bounding_box[3] - line_width / 2
 
     while current_y < doc_bounding_box[3]:
-        start_x = doc_bounding_box[0]
-        start_y = current_y
-
-        end_x = doc_bounding_box[2]
-        end_y = doc_bounding_box[3] - line_width / 2
-
-        by0 = start_y
-        by1 = start_y + line_width + (line_spacing * 2)
+        by0 = current_y
+        by1 = current_y + line_width
 
         select_boxes = []
         for box in boxes:
             wy0 = box.position[0][1]
             wy1 = box.position[1][1]
-            if by0 < wy0 and wy1 < by1 or \
-               wy0 < by1 and by1 < wy1 or \
-               wy0 < by0 and by0 < wy1:
+            if by0 <= wy0 and wy1 <= by1 or \
+               wy0 <= by1 and by1 <= wy1 or \
+               wy0 <= by0 and by0 <= wy1:
                 select_boxes.append(box)
 
         if select_boxes:
-            x = start_x
+            x0 = start_x
+            x1 = end_x
             for box in select_boxes:
-                end_x = box.position[0][0] - BOX_PADDING
-                draw_line(draw, [x, start_y, end_x, start_y], line_width=line_width, boundary_index=3, line_weight_factor=line_weight_factor)
-                x = box.position[1][0] + BOX_PADDING
-            draw_line(draw, [x + BOX_PADDING, start_y, doc_bounding_box[2], start_y], line_width=line_width, boundary_index=3, line_weight_factor=line_weight_factor)
+                x1 = box.position[0][0] - BOX_PADDING
+                draw_line(draw, [x0, current_y, x1, current_y],
+                          line_width=line_width, boundary_index=1, line_weight_factor=line_weight_factor, dir="h")
+                x0 = box.position[1][0] + BOX_PADDING
+            draw_line(draw, [x0 + BOX_PADDING, current_y, end_x, current_y],
+                      line_width=line_width, boundary_index=3, line_weight_factor=line_weight_factor, dir="h")
         else:
-           draw_line(draw, [start_x, start_y, end_x, start_y], line_width=line_width, color=color, wobble_max=1, line_weight_factor=line_weight_factor)
+            pass
+            draw_line(draw, [start_x, current_y, end_x, current_y],
+                      line_width=line_width, color=color, wobble_max=1,
+                      line_weight_factor=line_weight_factor,
+                      dir="h")
 
-        current_y = start_y + line_width + (line_spacing * 2)
+        current_y = by1
+
+#    for box in boxes:
+#        draw.rectangle(box.position, outline=(255, 0, 0))
 
 
-def draw_line(draw, pos, line_width, boundary_index=None, color=(0, 0, 0), wobble_max=5, line_weight_factor=1):
+def draw_line(draw, pos, line_width, boundary_index=None, dir="h", color=(0, 0, 0), wobble_max=1, line_weight_factor=1):
     # Draw a fuzzy line of randomish width repeat times
-    repeat = 50
+    repeat = 1
     width = int(line_width) * line_weight_factor
     default_padding = min([BOX_PADDING / wobble_max if boundary_index else BOX_PADDING, wobble_max])
 
@@ -122,7 +129,15 @@ def draw_line(draw, pos, line_width, boundary_index=None, color=(0, 0, 0), wobbl
             padding = default_padding
         pos[3] = random.uniform(pos[3] - padding, pos[3] + padding)
 
-        opacity = 200 + i
+        opacity = 100 + i
+
+        # Slide the center of the line down width/2 based on dir
+        if dir == 'h':
+            pos[1] += width / 2
+            pos[3] += width / 2
+        else:
+            pos[0] += width / 2
+            pos[2] += width / 2
         draw.line(pos, width=width, fill=(*color, opacity))
 
 def get_boxes(imagefile):
