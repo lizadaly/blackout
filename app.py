@@ -226,7 +226,7 @@ def find_boxes_for_grammar(boxes):
                 # If the previous noun was plural, the verb must be plural
                 if is_plural(prev_word[-1]):
                     pick_this = is_plural_verb(word) and pick_this
-                if not is_plural(prev_word[1]):
+                if not is_plural(prev_word[-1]):
                     pick_this = not is_plural_verb(word) and pick_this
             if prev_pos == 'VERB':
                 # If the verb was plural, the noun must be
@@ -307,7 +307,6 @@ def draw(imagefile):
     doc_bounding_box = (margin_left, margin_top, margin_right, margin_bottom)
 
     line_choices = random.choice(('v', 'h', 'a'))
-    line_choices = 'v'
     if line_choices == 'v':
         draw_vertical_lines(draw, select_boxes, doc_bounding_box=doc_bounding_box, line_width=line_width)
     elif line_choices == 'h':
