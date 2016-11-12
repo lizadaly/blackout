@@ -229,6 +229,7 @@ def find_boxes_for_grammar(boxes, words, word_box):
             word_index += 1
     return picks, grammar
 
+
 def draw(imagefile):
     tool = pyocr.get_available_tools()[0]
     lang = tool.get_available_languages()[0]
