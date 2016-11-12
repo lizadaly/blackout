@@ -104,7 +104,7 @@ def draw_horizontal_lines(draw, boxes, doc_bounding_box, line_width):
 
 def draw_line(draw, pos, line_width, boundary_index=None, dir="h", color=(0, 0, 0), wobble_max=3, line_weight_factor=1):
     # Draw a fuzzy line of randomish width repeat times
-    repeat = 1
+    repeat = 25
     width = int(line_width) * line_weight_factor
     default_padding = min([BOX_PADDING / wobble_max if boundary_index else BOX_PADDING, wobble_max])
 
@@ -136,7 +136,7 @@ def draw_line(draw, pos, line_width, boundary_index=None, dir="h", color=(0, 0, 
             padding = default_padding
         pos[3] = random.uniform(pos[3] - padding, pos[3] + padding)
 
-        opacity = 200 + i
+        opacity = 225 + i
 
         # Slide the center of the line down width/2 based on dir
         if dir == 'h':
@@ -207,7 +207,7 @@ def find_boxes_for_grammar(boxes):
                 if prev_word == 'this':
                     pick_this = not is_plural(word)
                 if prev_word == 'these':
-                    pick_this = is_plural(word)                    
+                    pick_this = is_plural(word)
             if prev_pos == 'NOUN':
                 # If the previous noun was plural, the verb must be plural
                 if prev_word[-1] == 's':
