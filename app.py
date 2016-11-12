@@ -20,6 +20,7 @@ def draw_vertical_lines(draw, boxes, doc_bounding_box, line_width):
     line_weight_factor = random.choice([1, 1, 1, 1, 0.02, 0.05, 0.07, 0.1, 0.2])
     current_x = doc_bounding_box[0] - line_width / 2
     color = (0, 0, 0)
+
     while current_x < doc_bounding_box[2]:
         start_x = current_x
         start_y = doc_bounding_box[1] - line_width / 2
@@ -59,7 +60,7 @@ def draw_vertical_lines(draw, boxes, doc_bounding_box, line_width):
 
 def draw_horizontal_lines(draw, boxes, doc_bounding_box, line_width):
     """Draw black horizontal lines across the page _except_ for that word"""
-    line_weight_factor = random.choice([1, 1, 1, 1, 0.1, 0.2])
+    line_weight_factor = random.choice([1, 1, 1, 1, 0.02, 0.05, 0.07, 0.1, 0.2])
     color = (0, 0, 0)
 
     start_x = doc_bounding_box[0]
@@ -102,9 +103,9 @@ def draw_horizontal_lines(draw, boxes, doc_bounding_box, line_width):
 #        draw.rectangle(box.position, outline=(255, 0, 0))
 
 
-def draw_line(draw, pos, line_width, boundary_index=None, dir="h", color=(0, 0, 0), wobble_max=3, line_weight_factor=1):
+def draw_line(draw, pos, line_width, boundary_index=None, dir="h", color=(0, 0, 0), wobble_max=30, line_weight_factor=1):
     # Draw a fuzzy line of randomish width repeat times
-    repeat = 1
+    repeat = 55
     width = int(line_width) * line_weight_factor
     default_padding = min([BOX_PADDING / wobble_max if boundary_index else BOX_PADDING, wobble_max])
 
@@ -180,61 +181,60 @@ def parse_words(boxes):
             word_box[token.text].token = token
     return words, word_box
 
-def find_boxes_for_grammar(boxes):
-    words, word_box = parse_words(boxes)
+def find_boxes_for_grammar(boxes, words, word_box):
     grammar = ['DET', 'NOUN', 'VERB', 'NOUN']
     picks = []
     word_index = 0
     prev_pos = None
     prev_word = None
     vowels = set(['a', 'e', 'i', 'o', 'u'])
-    retries = 30
-    try:
-        for pos in grammar:
-            while retries > 0:
-                word = words[word_index]
-                if len(picks) > 0:
-                    prev_word = picks[-1].content
-                if word_box[word].pos == pos:
-                    # Is the previous word a determinative a/an?
-                    if prev_pos == 'DET':
-                        if prev_word == 'a' or prev_word == 'an':
-                            # Don't pick this if it's plural
-                            if word[-1].endswith('s'):
-                                continue
-                        if prev_word == 'a':
-                            # Don't pick this if it begins with a vowel
-                            if word[0] in vowels:
-                                continue
-                        if prev_word == 'an':
-                            # Must pick with a vowel
-                            if not word[0] in vowels:
-                                continue
-                    if prev_pos == 'NOUN':
-                        # Noun/verb number aggreement
-                        if prev_word[-1] == 's':
-                            if word[-1] == 's':
-                                continue
-                        else:
-                            if word[-1] != 's':
-                                continue
-                    if prev_pos == 'VERB':
-                        print("Dep: ", picks[-1].token.dep_)
+    retries = 300
+    #print("-----")
+    for pos in grammar:
+        while retries > 0:
+            retries -= 1
+            word = words[word_index]
+            if len(picks) > 0:
+                prev_word = picks[-1].content
+            if word_box[word].pos == pos:
+                # Is the previous word a determinative a/an?
+                if prev_pos == 'DET':
+                    if prev_word == 'a' or prev_word == 'an':
+                        # Don't pick this if it's plural
+                        if word[-1].endswith('s'):
+                            continue
+                    if prev_word == 'a':
+                        # Don't pick this if it begins with a vowel
+                        if word[0] in vowels:
+                            continue
+                    if prev_word == 'an':
+                        # Must pick with a vowel
+                        if not word[0] in vowels:
+                            continue
+                if prev_pos == 'NOUN':
+                    # Noun/verb number aggreement
+                    if prev_word[-1] == 's':
+                        if word[-1] == 's':
+                            continue
+                    else:
+                        if word[-1] != 's':
+                            continue
+                if prev_pos == 'VERB':
+                    if picks[-1].token.dep_ == 'prep':
+                        continue
 
-                        # Was it transitive?
-                        pass
-                    if random.randint(0, 4) == 0:
-                        print("Picking ", word)
-                        picks.append(word_box[word])
-                        prev_pos = pos
-                        break
-                    retries -= 1
-                word_index += 1
-    except IndexError:
-        print("Starting over")
-        find_boxes_for_grammar(boxes)
-    return picks
+                    # Was it transitive?
+                    pass
+                if random.randint(0, 20) == 0:
+                    #print("Picking ", word, " ", word_box[word].token.dep_)
+                    picks.append(word_box[word])
+                    prev_pos = pos
+                    break
+            word_index += 1
+    return picks, grammar
 
+class DidNotFinishException(Exception):
+    pass
 
 def draw(imagefile):
     tool = pyocr.get_available_tools()[0]
@@ -242,8 +242,12 @@ def draw(imagefile):
 
     boxes = get_boxes(imagefile, tool)
 
-    select_boxes = find_boxes_for_grammar(boxes)
+    words, word_box = parse_words(boxes)
 
+    while True:
+        select_boxes, grammar = find_boxes_for_grammar(boxes, words, word_box)
+        if len(select_boxes) == len(grammar):
+            break
 
     # Get the line height by taking the average of all the box heights
     box_heights = []
@@ -251,6 +255,8 @@ def draw(imagefile):
     margin_rights = []
     margin_top = boxes[0].position[0][1]
     margin_bottom = boxes[-1].position[1][1]
+    print("Bottom content: ", boxes[-1].content)
+    print("Bottom: ", margin_bottom)
 
     for box in boxes:
         margin_lefts.append(box.position[0][0])
@@ -261,25 +267,23 @@ def draw(imagefile):
     margin_right = max(margin_rights)
 
     line_width = mean(box_heights)
-    line_spaces = [0]
-    last_y_pos = boxes[0].position[1][1]
 
     src = Image.open(imagefile)
     src = src.convert('RGBA')
     img = Image.new('RGBA', (src.size[0], src.size[1]))
     draw = ImageDraw.Draw(img)
 
-
     doc_bounding_box = (margin_left, margin_top, margin_right, margin_bottom)
 
     line_choices = random.choice(('v', 'h', 'a'))
+    line_choices = 'h'
     if line_choices == 'v':
         draw_vertical_lines(draw, select_boxes, doc_bounding_box=doc_bounding_box, line_width=line_width)
     elif line_choices == 'h':
         draw_horizontal_lines(draw, select_boxes,
                               doc_bounding_box=doc_bounding_box,
                               line_width=line_width)
-    else:
+    elif line_choices == 'a':
         draw_vertical_lines(draw, select_boxes, doc_bounding_box=doc_bounding_box, line_width=line_width)
         draw_horizontal_lines(draw, select_boxes,
                               doc_bounding_box=doc_bounding_box,
@@ -289,11 +293,11 @@ def draw(imagefile):
     out = Image.alpha_composite(src, img)
     final = Image.new('RGBA', (src.size[0], src.size[1]))
     canvas = ImageDraw.Draw(final)
-    canvas.rectangle([0, 0, final.size[0], final.size[1]], fill='white')
+    canvas.rectangle([0, 0, src.size[0], src.size[1]], fill=(255,255,255,255))
     final = Image.alpha_composite(final, out)
     outfile = os.path.basename(imagefile)
     final.save("build/" + outfile)
-
+    return True
 
 if __name__ == '__main__':
     imagefile = 'data/books/vindication/0046.png'
