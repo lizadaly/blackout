@@ -49,7 +49,7 @@ def draw_vertical_lines(draw, boxes, doc_bounding_box, line_width):
                           wobble_max=1.1,
                           boundary_index=3, line_weight_factor=line_weight_factor)
                 y0 = box.position[1][1] + BOX_PADDING
-            draw_line(draw, [start_x, y0 + BOX_PADDING, start_x, end_y], line_width=line_width,
+            draw_line(draw, [start_x, y0, start_x, end_y], line_width=line_width,
                       wobble_max=1.1,
                       boundary_index=1, line_weight_factor=line_weight_factor)
         else:
@@ -328,6 +328,9 @@ def draw(imagefile):
     img = image_filter(img)
     out = Image.alpha_composite(src, img)
 
+    repeat = 10
+    f = 10
+
     for box in select_boxes:
         pad = BOX_PADDING
         d = ImageDraw.Draw(out)
@@ -337,11 +340,22 @@ def draw(imagefile):
         p3 = [box.position[0][0] - pad, box.position[1][1] + pad]
         b = (*p0, *p2)
         crop = src.crop(box=b)
-        out.paste(crop, box=b)        
-        d.line(p0 + p1, width=5, fill="red")
-        d.line(p1 + p2, width=5, fill="red")
-        d.line(p2 + p3, width=5, fill="red")
-        d.line(p3 + p0, width=5, fill="red")
+        out.paste(crop, box=b)
+        w = 10 + int(random.uniform(-5, 5))
+        for i in range(0, repeat):
+            fuzz = random.uniform(-f, f)
+            p0 = [p + fuzz for p in p0]
+            fuzz = random.uniform(-f, f)
+            p1 = [p + fuzz for p in p1]
+            fuzz = random.uniform(-f, f)
+            p2 = [p + fuzz for p in p2]
+            fuzz = random.uniform(-f, f)
+            p3 = [p + fuzz for p in p3]
+            fuzz = random.uniform(-f, f)
+            d.line(p0 + p1, width=w, fill="black")
+            d.line(p1 + p2, width=w, fill="black")
+            d.line(p2 + p3, width=w, fill="black")
+            d.line(p3 + p0, width=w, fill="black")
 
 
     final = Image.new('RGBA', (src.size[0], src.size[1]))
