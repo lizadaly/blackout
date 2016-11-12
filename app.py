@@ -188,53 +188,46 @@ def find_boxes_for_grammar(boxes, words, word_box):
     prev_pos = None
     prev_word = None
     vowels = set(['a', 'e', 'i', 'o', 'u'])
-    retries = 300
-    #print("-----")
     for pos in grammar:
-        while retries > 0:
-            retries -= 1
-            word = words[word_index]
-            if len(picks) > 0:
-                prev_word = picks[-1].content
-            if word_box[word].pos == pos:
-                # Is the previous word a determinative a/an?
-                if prev_pos == 'DET':
-                    if prev_word == 'a' or prev_word == 'an':
-                        # Don't pick this if it's plural
-                        if word[-1].endswith('s'):
-                            continue
-                    if prev_word == 'a':
-                        # Don't pick this if it begins with a vowel
-                        if word[0] in vowels:
-                            continue
-                    if prev_word == 'an':
-                        # Must pick with a vowel
-                        if not word[0] in vowels:
-                            continue
-                if prev_pos == 'NOUN':
-                    # Noun/verb number aggreement
-                    if prev_word[-1] == 's':
-                        if word[-1] == 's':
-                            continue
-                    else:
-                        if word[-1] != 's':
-                            continue
-                if prev_pos == 'VERB':
-                    if picks[-1].token.dep_ == 'prep':
+        word = words[word_index]
+        if len(picks) > 0:
+            prev_word = picks[-1].content
+        if word_box[word].pos == pos:
+            # Is the previous word a determinative a/an?
+            if prev_pos == 'DET':
+                if prev_word == 'a' or prev_word == 'an':
+                    # Don't pick this if it's plural
+                    if word[-1].endswith('s'):
                         continue
+                if prev_word == 'a':
+                    # Don't pick this if it begins with a vowel
+                    if word[0] in vowels:
+                        continue
+                if prev_word == 'an':
+                    # Must pick with a vowel
+                    if not word[0] in vowels:
+                        continue
+            if prev_pos == 'NOUN':
+                # Noun/verb number aggreement
+                if prev_word[-1] == 's':
+                    if word[-1] == 's':
+                        continue
+                else:
+                    if word[-1] != 's':
+                        continue
+            if prev_pos == 'VERB':
+                if picks[-1].token.dep_ == 'prep':
+                    continue
 
-                    # Was it transitive?
-                    pass
-                if random.randint(0, 20) == 0:
-                    #print("Picking ", word, " ", word_box[word].token.dep_)
-                    picks.append(word_box[word])
-                    prev_pos = pos
-                    break
+                # Was it transitive?
+                pass
+            if random.randint(0, 20) == 0:
+                print("Picking ", word, " ", word_box[word].token.dep_)
+                picks.append(word_box[word])
+                prev_pos = pos
+                break
             word_index += 1
     return picks, grammar
-
-class DidNotFinishException(Exception):
-    pass
 
 def draw(imagefile):
     tool = pyocr.get_available_tools()[0]
@@ -244,10 +237,7 @@ def draw(imagefile):
 
     words, word_box = parse_words(boxes)
 
-    while True:
-        select_boxes, grammar = find_boxes_for_grammar(boxes, words, word_box)
-        if len(select_boxes) == len(grammar):
-            break
+    select_boxes, grammar = find_boxes_for_grammar(boxes, words, word_box)
 
     # Get the line height by taking the average of all the box heights
     box_heights = []
