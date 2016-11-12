@@ -189,22 +189,36 @@ def find_boxes_for_grammar(boxes):
     prev_word = None
     vowels = set(['a', 'e', 'i', 'o', 'u'])
     retries = 30
-    try:
-        for pos in grammar:
-            while retries > 0:
-                word = words[word_index]
-                if len(picks) > 0:
-                    prev_word = picks[-1].content
-                if word_box[word].pos == pos:
-                    print("Picking ", word)
-                    picks.append(word_box[word])
-                    prev_pos = pos
-                    break
+    for pos in grammar:
+        while retries > 0:
+            word = words[word_index]
+            if len(picks) > 0:
+                prev_word = picks[-1].content
+            pick_this = True
+            if prev_pos == 'DET':
+                if prev_word == 'a' or prev_word == 'an':
+                    # Pick this if it's singular
+                    if word[-1] == 's':
+                        pick_this = False
+                if prev_word == 'a':
+                    # Pick this if it doesn't start with a vowel
+                    if word[0] in vowels:
+                        pick_this = False
+                elif prev_word == 'an':
+                    if word[0] not in vowels:
+                        pick_this == False
+            if prev_pos == 'NOUN':
+                # If the previous noun was plural, the verb must be plural
+                if prev_word[-1] == 's':
+                    if word[-1] == 's':
+                        pick_this = False
+            if word_box[word].pos == pos and pick_this:
+                print("Picking ", word)
+                picks.append(word_box[word])
+                prev_pos = pos
+                break
 
-                word_index += 1
-    except IndexError:
-        print("Starting over")
-        find_boxes_for_grammar(boxes)
+            word_index += 1
     return picks
 
 
