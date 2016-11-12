@@ -11,15 +11,15 @@ import pyocr.builders
 from PIL import Image, ImageDraw, ImageFilter
 
 BOX_PADDING = 10
+WOBBLE_MAX = 3
 
 nlp = spacy.load('en')
 
-
-
 def draw_vertical_lines(draw, boxes, doc_bounding_box, line_width):
-    line_weight_factor = random.choice([1, 1, 1, 1, 0.02, 0.05, 0.07, 0.1, 0.2])
+    line_weight_factor = random.choice([1, 0.02, 0.05, 0.07, 0.1, 0.2])
     current_x = doc_bounding_box[0] - line_width / 2
     color = (0, 0, 0)
+    adjacent_line = False
     while current_x < doc_bounding_box[2]:
         start_x = current_x
         start_y = doc_bounding_box[1] - line_width / 2
@@ -41,16 +41,21 @@ def draw_vertical_lines(draw, boxes, doc_bounding_box, line_width):
         if select_boxes:
             y0 = start_y
             y1 = end_y
+            adjacent_line = True
             for box in select_boxes:
                 y1 = box.position[0][1] - BOX_PADDING
                 draw_line(draw, [start_x, y0, start_x, y1], line_width=line_width,
+                          wobble_max=1,
                           boundary_index=2, line_weight_factor=line_weight_factor)
                 y0 = box.position[1][1] + BOX_PADDING
             draw_line(draw, [start_x, y0 + BOX_PADDING, start_x, end_y], line_width=line_width,
+                      wobble_max=1,
                       boundary_index=0, line_weight_factor=line_weight_factor)
         else:
-           draw_line(draw, [start_x, start_y, end_x, end_y], line_width=line_width,
-                     wobble_max=1, line_weight_factor=line_weight_factor)
+            draw_line(draw, [start_x, start_y, end_x, end_y], line_width=line_width,
+                      wobble_max=1 if adjacent_line else WOBBLE_MAX,
+                      line_weight_factor=line_weight_factor)
+            adjacent_line = False
 
         current_x = start_x + line_width
 
@@ -59,9 +64,9 @@ def draw_vertical_lines(draw, boxes, doc_bounding_box, line_width):
 
 def draw_horizontal_lines(draw, boxes, doc_bounding_box, line_width):
     """Draw black horizontal lines across the page _except_ for that word"""
-    line_weight_factor = random.choice([1, 1, 1, 1, 0.1, 0.2])
+    line_weight_factor = random.choice([1, 0.02, 0.05, 0.07, 0.1, 0.2])
     color = (0, 0, 0)
-
+    adjacent_line = False
     start_x = doc_bounding_box[0]
     current_y = doc_bounding_box[1]
     end_x = doc_bounding_box[2]
@@ -81,20 +86,27 @@ def draw_horizontal_lines(draw, boxes, doc_bounding_box, line_width):
                 select_boxes.append(box)
 
         if select_boxes:
+            adjacent_line = True
             x0 = start_x
             x1 = end_x
             for box in select_boxes:
                 x1 = box.position[0][0] - BOX_PADDING
                 draw_line(draw, [x0, current_y, x1, current_y],
-                          line_width=line_width, boundary_index=1, line_weight_factor=line_weight_factor, dir="h")
+                          line_width=line_width, boundary_index=0,
+                          wobble_max=1,
+                          line_weight_factor=line_weight_factor,
+                          dir="h")
                 x0 = box.position[1][0] + BOX_PADDING
             draw_line(draw, [x0 + BOX_PADDING, current_y, end_x, current_y],
-                      line_width=line_width, boundary_index=3, line_weight_factor=line_weight_factor, dir="h")
+                      wobble_max=1,
+                      line_width=line_width, boundary_index=2, line_weight_factor=line_weight_factor, dir="h")
         else:
             draw_line(draw, [start_x, current_y, end_x, current_y],
-                      line_width=line_width, color=color, wobble_max=1,
+                      line_width=line_width, color=color,
+                      wobble_max=1 if adjacent_line else WOBBLE_MAX,
                       line_weight_factor=line_weight_factor,
                       dir="h")
+            adjacent_line = False
 
         current_y = by1
 
@@ -102,14 +114,32 @@ def draw_horizontal_lines(draw, boxes, doc_bounding_box, line_width):
 #        draw.rectangle(box.position, outline=(255, 0, 0))
 
 
-def draw_line(draw, pos, line_width, boundary_index=None, dir="h", color=(0, 0, 0), wobble_max=3, line_weight_factor=1):
+def draw_line(draw, pos, line_width, boundary_index=None, dir="h", color=(0, 0, 0), wobble_max=1, line_weight_factor=1):
     # Draw a fuzzy line of randomish width repeat times
-    repeat = 25
+    repeat = 20
     width = int(line_width) * line_weight_factor
     default_padding = min([BOX_PADDING / wobble_max if boundary_index else BOX_PADDING, wobble_max])
+    default_padding = 0 if boundary_index else BOX_PADDING
+
+    # Slide the center of the line down width/2 based on dir
+    if dir == 'h':
+        pos[1] += width / 2
+        pos[3] += width / 2
+        # Introduce some randomness into the margins
+        if not boundary_index:
+            pos[0] -= random.uniform(width / 2, width * 2)
+            pos[2] += random.uniform(width / 2, width * 2)
+    else:
+        pos[0] -= width / 2
+        pos[2] -= width / 2
+        # Introduce some randomness into the margins
+        if not boundary_index:
+            pos[1] -= random.uniform(width / 2, width * 2)
+            pos[3] += random.uniform(width / 2, width * 2)
 
     for i in range(0, repeat):
-        width = int(random.uniform(line_width - (default_padding * 2.0), line_width))
+
+        width = int(random.uniform(line_width - default_padding, line_width))
 
         if boundary_index == 0:
             padding = 0.1
@@ -136,15 +166,7 @@ def draw_line(draw, pos, line_width, boundary_index=None, dir="h", color=(0, 0, 
             padding = default_padding
         pos[3] = random.uniform(pos[3] - padding, pos[3] + padding)
 
-        opacity = 225 + i
-
-        # Slide the center of the line down width/2 based on dir
-        if dir == 'h':
-            pos[1] += width / 2
-            pos[3] += width / 2
-        else:
-            pos[0] += width / 2
-            pos[2] += width / 2
+        opacity = 220 + i
         draw.line(pos, width=width, fill=(*color, opacity))
 
 def get_boxes(imagefile, tool):
@@ -188,9 +210,8 @@ def find_boxes_for_grammar(boxes):
     prev_pos = None
     prev_word = None
 
-    retries = 30
     for pos in grammar:
-        while retries > 0:
+        while True:
             word = words[word_index]
             if len(picks) > 0:
                 prev_word = picks[-1].content
@@ -201,27 +222,43 @@ def find_boxes_for_grammar(boxes):
                     pick_this = not is_plural(word)
                 if prev_word == 'a':
                     # Pick this if it doesn't start with a vowel
-                    pick_this = not starts_with_vowel(word)
+                    pick_this = not starts_with_vowel(word) and pick_this
                 if prev_word == 'an':
-                    pick_this = starts_with_vowel(word)
+                    pick_this = starts_with_vowel(word) and pick_this
                 if prev_word == 'this':
-                    pick_this = not is_plural(word)
+                    pick_this = not is_plural(word) and pick_this
                 if prev_word == 'these':
-                    pick_this = is_plural(word)
+                    pick_this = is_plural(word) and pick_this
             if prev_pos == 'NOUN':
                 # If the previous noun was plural, the verb must be plural
+                if is_plural(prev_word[-1]):
+                    pick_this = word[-1] != 's' and pick_this
+                if not is_plural(prev_word[1]):
+                    pick_this = word[-1] == 's' and pick_this
+            if prev_pos == 'VERB':
+                # If the verb was plural, the noun must be
+                if prev_word[-1] != 's':  # Plural verbs have no 's'
+                    pick_this = is_plural(word) and pick_this
                 if prev_word[-1] == 's':
-                    pick_this = not is_plural(word)
+                    pick_this = not is_plural(word) and pick_this
+            if pos == 'VERB':
+                # Don't pick auxilliary verbs as they won't have a helper
+                pick_this = word_box[word].token.dep_ != 'AUX' and pick_this
+
             if word_box[word].pos == pos and pick_this and random.randint(0, 5) == 0:
-                print("Picking ", word)
+                print("Picking ", word, " ", word_box[word].token.dep_)
                 picks.append(word_box[word])
                 prev_pos = pos
+                word_index += 1
                 break
 
             word_index += 1
     return picks
 
 def is_plural(word):
+    if word == 'men' or word == 'women':  # Special case this since one comes up a lot
+        return True
+
     return word[-1] == 's'
 
 def is_present(word):
@@ -237,8 +274,13 @@ def draw(imagefile):
 
     boxes = get_boxes(imagefile, tool)
 
-    select_boxes = find_boxes_for_grammar(boxes)
-
+    while True:
+        try:
+            select_boxes = find_boxes_for_grammar(boxes)
+            break
+        except IndexError:
+            print("Retrying...")
+            pass
 
     # Get the line height by taking the average of all the box heights
     box_heights = []
