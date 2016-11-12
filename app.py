@@ -46,15 +46,12 @@ def draw_vertical_lines(draw, boxes, doc_bounding_box, line_width):
             for box in select_boxes:
                 y1 = box.position[0][1] - BOX_PADDING
                 draw_line(draw, [start_x, y0, start_x, y1], line_width=line_width,
-                          wobble_max=1.1,
-                          boundary_index=3, line_weight_factor=line_weight_factor)
+                          line_weight_factor=line_weight_factor)
                 y0 = box.position[1][1] + BOX_PADDING
             draw_line(draw, [start_x, y0, start_x, end_y], line_width=line_width,
-                      wobble_max=1.1,
-                      boundary_index=1, line_weight_factor=line_weight_factor)
+                      line_weight_factor=line_weight_factor)
         else:
             draw_line(draw, [start_x, start_y, end_x, end_y], line_width=line_width,
-                      wobble_max=1 if adjacent_line else WOBBLE_MAX,
                       line_weight_factor=line_weight_factor)
             adjacent_line = False
 
