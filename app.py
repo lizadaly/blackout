@@ -10,8 +10,9 @@ import pyocr
 import pyocr.builders
 from PIL import Image, ImageDraw, ImageFilter
 
-BOX_PADDING = 10
-WOBBLE_MAX = 3
+BOUND_PADDING = 50
+BOX_PADDING = 50 # 10
+WOBBLE_MAX = 2
 
 nlp = spacy.load('en')
 
@@ -31,8 +32,8 @@ def draw_vertical_lines(draw, boxes, doc_bounding_box, line_width):
 
         select_boxes = []
         for box in boxes:
-            wx0 = box.position[0][0]
-            wx1 = box.position[1][0]
+            wx0 = box.position[0][0] - BOUND_PADDING
+            wx1 = box.position[1][0] + BOUND_PADDING
             if bx0 < wx0 and wx1 < bx1 or \
                wx0 < bx1 and bx1 < wx1 or \
                wx0 < bx0 and bx0 < wx1:
@@ -45,12 +46,12 @@ def draw_vertical_lines(draw, boxes, doc_bounding_box, line_width):
             for box in select_boxes:
                 y1 = box.position[0][1] - BOX_PADDING
                 draw_line(draw, [start_x, y0, start_x, y1], line_width=line_width,
-                          wobble_max=1,
-                          boundary_index=2, line_weight_factor=line_weight_factor)
+                          wobble_max=1.1,
+                          boundary_index=3, line_weight_factor=line_weight_factor)
                 y0 = box.position[1][1] + BOX_PADDING
             draw_line(draw, [start_x, y0 + BOX_PADDING, start_x, end_y], line_width=line_width,
-                      wobble_max=1,
-                      boundary_index=0, line_weight_factor=line_weight_factor)
+                      wobble_max=1.1,
+                      boundary_index=1, line_weight_factor=line_weight_factor)
         else:
             draw_line(draw, [start_x, start_y, end_x, end_y], line_width=line_width,
                       wobble_max=1 if adjacent_line else WOBBLE_MAX,
@@ -59,8 +60,7 @@ def draw_vertical_lines(draw, boxes, doc_bounding_box, line_width):
 
         current_x = start_x + line_width
 
-#    for box in boxes:
-#        draw.rectangle(box.position, outline=(255, 0, 0))
+
 
 def draw_horizontal_lines(draw, boxes, doc_bounding_box, line_width):
     """Draw black horizontal lines across the page _except_ for that word"""
@@ -110,8 +110,6 @@ def draw_horizontal_lines(draw, boxes, doc_bounding_box, line_width):
 
         current_y = by1
 
-#    for box in boxes:
-#        draw.rectangle(box.position, outline=(255, 0, 0))
 
 
 def draw_line(draw, pos, line_width, boundary_index=None, dir="h", color=(0, 0, 0), wobble_max=1, line_weight_factor=1):
@@ -126,16 +124,14 @@ def draw_line(draw, pos, line_width, boundary_index=None, dir="h", color=(0, 0, 
         pos[1] += width / 2
         pos[3] += width / 2
         # Introduce some randomness into the margins
-        if not boundary_index:
-            pos[0] -= random.uniform(width / 2, width * 2)
-            pos[2] += random.uniform(width / 2, width * 2)
+        pos[0] -= random.uniform(width / 2, width * 2)
+        pos[2] += random.uniform(width / 2, width * 2)
     else:
         pos[0] -= width / 2
         pos[2] -= width / 2
         # Introduce some randomness into the margins
-        if not boundary_index:
-            pos[1] -= random.uniform(width / 2, width * 2)
-            pos[3] += random.uniform(width / 2, width * 2)
+        pos[1] -= random.uniform(width / 2, width * 2)
+        pos[3] += random.uniform(width / 2, width * 2)
 
     for i in range(0, repeat):
 
@@ -232,14 +228,14 @@ def find_boxes_for_grammar(boxes):
             if prev_pos == 'NOUN':
                 # If the previous noun was plural, the verb must be plural
                 if is_plural(prev_word[-1]):
-                    pick_this = word[-1] != 's' and pick_this
+                    pick_this = is_plural_verb(word) and pick_this
                 if not is_plural(prev_word[1]):
-                    pick_this = word[-1] == 's' and pick_this
+                    pick_this = not is_plural_verb(word) and pick_this
             if prev_pos == 'VERB':
                 # If the verb was plural, the noun must be
-                if prev_word[-1] != 's':  # Plural verbs have no 's'
+                if is_plural_verb(prev_word[-1]):
                     pick_this = is_plural(word) and pick_this
-                if prev_word[-1] == 's':
+                if not is_plural_verb(prev_word[-1]):
                     pick_this = not is_plural(word) and pick_this
             if pos == 'VERB':
                 # Don't pick auxilliary verbs as they won't have a helper
@@ -258,8 +254,12 @@ def find_boxes_for_grammar(boxes):
 def is_plural(word):
     if word == 'men' or word == 'women':  # Special case this since one comes up a lot
         return True
-
     return word[-1] == 's'
+
+def is_plural_verb(word):
+    if word == 'have':
+        return True
+    return word[-1] != 's'
 
 def is_present(word):
     return word[-1] == 's'
@@ -310,6 +310,7 @@ def draw(imagefile):
     doc_bounding_box = (margin_left, margin_top, margin_right, margin_bottom)
 
     line_choices = random.choice(('v', 'h', 'a'))
+    line_choices = 'v'
     if line_choices == 'v':
         draw_vertical_lines(draw, select_boxes, doc_bounding_box=doc_bounding_box, line_width=line_width)
     elif line_choices == 'h':
@@ -322,8 +323,27 @@ def draw(imagefile):
                               doc_bounding_box=doc_bounding_box,
                               line_width=line_width)
 
+
+
     img = image_filter(img)
     out = Image.alpha_composite(src, img)
+
+    for box in select_boxes:
+        pad = BOX_PADDING
+        d = ImageDraw.Draw(out)
+        p0 = [box.position[0][0] - pad, box.position[0][1] - pad]
+        p1 = [box.position[1][0] + pad, box.position[0][1] - pad]
+        p2 = [box.position[1][0] + pad, box.position[1][1] + pad]
+        p3 = [box.position[0][0] - pad, box.position[1][1] + pad]
+        b = (*p0, *p2)
+        crop = src.crop(box=b)
+        out.paste(crop, box=b)        
+        d.line(p0 + p1, width=5, fill="red")
+        d.line(p1 + p2, width=5, fill="red")
+        d.line(p2 + p3, width=5, fill="red")
+        d.line(p3 + p0, width=5, fill="red")
+
+
     final = Image.new('RGBA', (src.size[0], src.size[1]))
     canvas = ImageDraw.Draw(final)
     canvas.rectangle([0, 0, final.size[0], final.size[1]], fill='white')
