@@ -17,7 +17,7 @@ WOBBLE_MAX = 2
 nlp = spacy.load('en')
 
 def draw_vertical_lines(draw, boxes, doc_bounding_box, line_width):
-    line_weight_factor = random.choice([1, 0.02, 0.05, 0.07, 0.1, 0.2])
+    line_weight_factor = random.triangular(0.05, 1.2)
     current_x = doc_bounding_box[0] - line_width / 2
     color = (0, 0, 0)
     adjacent_line = False
@@ -61,7 +61,7 @@ def draw_vertical_lines(draw, boxes, doc_bounding_box, line_width):
 
 def draw_horizontal_lines(draw, boxes, doc_bounding_box, line_width):
     """Draw black horizontal lines across the page _except_ for that word"""
-    line_weight_factor = random.choice([1, 0.02, 0.05, 0.07, 0.1, 0.2])
+    line_weight_factor = random.triangular(0.05, 1.2)
     color = (0, 0, 0)
     adjacent_line = False
     start_x = doc_bounding_box[0]
