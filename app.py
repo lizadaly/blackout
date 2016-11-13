@@ -2,6 +2,7 @@ import os
 import random
 from statistics import mean
 import string
+import uuid
 
 import tracery
 import spacy
@@ -17,10 +18,10 @@ WOBBLE_MAX = 2
 nlp = spacy.load('en')
 
 def draw_vertical_lines(draw, boxes, doc_bounding_box, line_width):
-    line_weight_factor = random.triangular(0.05, 1.2)
+    line_weight_factor = random.triangular(0.005, 1.2)
     current_x = doc_bounding_box[0] - line_width / 2
-    color = (0, 0, 0)
-    adjacent_line = False
+    color = get_color()
+
     while current_x < doc_bounding_box[2]:
         start_x = current_x
         start_y = doc_bounding_box[1] - line_width / 2
@@ -42,28 +43,33 @@ def draw_vertical_lines(draw, boxes, doc_bounding_box, line_width):
         if select_boxes:
             y0 = start_y
             y1 = end_y
-            adjacent_line = True
             for box in select_boxes:
                 y1 = box.position[0][1] - BOX_PADDING
-                draw_line(draw, [start_x, y0, start_x, y1], line_width=line_width,
-                          line_weight_factor=line_weight_factor)
+                draw_line(draw, [start_x, y0, end_x, y1], line_width=line_width, color=color,
+                          line_weight_factor=line_weight_factor, dir='v')
                 y0 = box.position[1][1] + BOX_PADDING
-            draw_line(draw, [start_x, y0, start_x, end_y], line_width=line_width,
-                      line_weight_factor=line_weight_factor)
+            draw_line(draw, [start_x, y0, end_x, end_y], line_width=line_width,  color=color,
+                      line_weight_factor=line_weight_factor, dir='v')
         else:
-            draw_line(draw, [start_x, start_y, end_x, end_y], line_width=line_width,
-                      line_weight_factor=line_weight_factor)
-            adjacent_line = False
+            draw_line(draw, [start_x, start_y, end_x, end_y], line_width=line_width,  color=color,
+                      line_weight_factor=line_weight_factor, dir='v')
 
         current_x = start_x + line_width
 
-
+def get_color():
+    if random.randint(0, 100) == 0:
+        color = (179, 27, 27)
+    else:
+        color = (int(random.triangular(0, 10, 1)),
+                 int(random.triangular(0, 10, 1)),
+                 int(random.triangular(0, 10, 1)),
+                 )
+    return color
 
 def draw_horizontal_lines(draw, boxes, doc_bounding_box, line_width):
     """Draw black horizontal lines across the page _except_ for that word"""
-    line_weight_factor = random.triangular(0.05, 1.2)
-    color = (0, 0, 0)
-    adjacent_line = False
+    line_weight_factor = random.triangular(0.005, 1.2)
+    color = get_color()
     start_x = doc_bounding_box[0]
     current_y = doc_bounding_box[1]
     end_x = doc_bounding_box[2]
@@ -83,80 +89,60 @@ def draw_horizontal_lines(draw, boxes, doc_bounding_box, line_width):
                 select_boxes.append(box)
 
         if select_boxes:
-            adjacent_line = True
             x0 = start_x
             x1 = end_x
             for box in select_boxes:
                 x1 = box.position[0][0] - BOX_PADDING
                 draw_line(draw, [x0, current_y, x1, current_y],
                           line_width=line_width,
-                          line_weight_factor=line_weight_factor,
+                          line_weight_factor=line_weight_factor, color=color,
                           dir="h")
                 x0 = box.position[1][0] + BOX_PADDING
             draw_line(draw, [x0 + BOX_PADDING, current_y, end_x, current_y],
-                      line_width=line_width, line_weight_factor=line_weight_factor, dir="h")
+                      line_width=line_width, line_weight_factor=line_weight_factor, dir="h", color=color)
         else:
             draw_line(draw, [start_x, current_y, end_x, current_y],
                       line_width=line_width, color=color,
                       line_weight_factor=line_weight_factor,
                       dir="h")
-            adjacent_line = False
-
         current_y = by1
 
 
 
-def draw_line(draw, pos, line_width, boundary_index=None, dir="h", color=(0, 0, 0), line_weight_factor=1):
+def draw_line(draw, pos, line_width, dir="h", color=(0, 0, 0), line_weight_factor=1):
     # Draw a fuzzy line of randomish width repeat times
-    repeat = 20
+    repeat = random.randint(10, 20)
     width = int(line_width) * line_weight_factor
     default_padding = line_width / 3
 
+    margin_extent = 20 # random.randint(1, 20)
     # Slide the center of the line down width/2 based on dir
     if dir == 'h':
         pos[1] += width / 2
         pos[3] += width / 2
         # Introduce some randomness into the margins
-        pos[0] -= random.uniform(width / 2, width * 2)
-        pos[2] += random.uniform(width / 2, width * 2)
+        pos[0] -= random.triangular(width / margin_extent, width * margin_extent)
+        pos[2] += random.triangular(width / margin_extent, width * margin_extent)
     else:
         pos[0] -= width / 2
         pos[2] -= width / 2
         # Introduce some randomness into the margins
-        pos[1] -= random.uniform(width / 2, width * 2)
-        pos[3] += random.uniform(width / 2, width * 2)
+        pos[1] -= random.triangular(width / margin_extent, width * margin_extent)
+        pos[3] += random.triangular(width / margin_extent, width * margin_extent)
 
     for i in range(0, repeat):
 
         width = int(random.uniform(line_width - default_padding, line_width))
+        padding = default_padding * 4
 
-        if boundary_index == 0:
-            padding = 0.1
-        else:
-            padding = default_padding
+        pos[0] = random.triangular(pos[0] - padding, pos[0] + padding)
+        pos[1] = random.triangular(pos[1] - padding, pos[1] + padding)
+        pos[2] = random.triangular(pos[2] - padding, pos[2] + padding)
+        pos[3] = random.triangular(pos[3] - padding, pos[3] + padding)
 
-        pos[0] = random.uniform(pos[0] - padding, pos[0] + padding)
-
-        if boundary_index == 1:
-            padding = 0.1
-        else:
-            padding = default_padding
-        pos[1] = random.uniform(pos[1] - padding, pos[1] + padding)
-
-        if boundary_index == 2:
-            padding = 0.1
-        else:
-            padding = default_padding
-        pos[2] = random.uniform(pos[2] - padding, pos[2] + padding)
-
-        if boundary_index == 3:
-            padding = 0.1
-        else:
-            padding = default_padding
-        pos[3] = random.uniform(pos[3] - padding, pos[3] + padding)
-
-        opacity = 230 + i
-        draw.line(pos, width=width, fill=(*color, opacity))
+        opacity = 240 + i
+        width_factor = random.triangular(1, 10, 1)
+        draw.line(pos, width=int(width / width_factor), fill=(*color, opacity))
 
 def get_boxes(imagefile, tool):
     num_words = 5
@@ -195,6 +181,8 @@ def find_boxes_for_grammar(boxes):
         ['ADJ', 'NOUN', 'VERB', 'NOUN'],
         ['ADJ', 'NOUN', 'VERB', 'ADV'],
         ['DET', 'NOUN', 'VERB', 'NOUN', 'CONJ', 'NOUN'],
+        ['VERB', 'DET', 'NOUN'],
+        ['ADV', 'VERB', 'NOUN', 'CONJ', 'NOUN']
     ]
     grammar = random.choice(grammars)
     picks = []
@@ -236,10 +224,11 @@ def find_boxes_for_grammar(boxes):
                     pick_this = not is_plural(word) and pick_this
             if pos == 'VERB':
                 # Don't pick auxilliary verbs as they won't have a helper
-                pick_this = word['token'].dep_ != 'AUX' and pick_this
+                if 'token' in word:
+                    pick_this = word['token'].dep_ != 'aux' and pick_this
 
-            if word['pos'] == pos and pick_this and random.randint(0, 30) == 0:
-                print("Picking ", word['text'], " ", word['token'].dep_)
+            if 'pos' in word and word['pos'] == pos and pick_this and random.randint(0, 30) == 0:
+                #print("Picking ", word['text'], " ", word['token'].dep_)
                 picks.append(word)
                 prev_pos = pos
                 word_index += 1
@@ -265,18 +254,19 @@ def starts_with_vowel(word):
     vowels = set(['a', 'e', 'i', 'o', 'u'])
     return word['text'][0] in vowels
 
-def draw(imagefile):
+def setup(imagefile):
     tool = pyocr.get_available_tools()[0]
-    lang = tool.get_available_languages()[0]
-
     boxes = get_boxes(imagefile, tool)
+    return boxes
+
+def draw(imagefile, boxes):
 
     while True:
         try:
             select_boxes = find_boxes_for_grammar(boxes)
             break
         except IndexError:
-            print("Retrying...")
+            #print("Retrying...")
             pass
 
     # Get the line height by taking the average of all the box heights
@@ -307,6 +297,7 @@ def draw(imagefile):
     doc_bounding_box = (margin_left, margin_top, margin_right, margin_bottom)
 
     line_choices = random.choice(('v', 'h', 'a'))
+    line_choices = 'v'
     if line_choices == 'v':
         draw_vertical_lines(draw, select_boxes, doc_bounding_box=doc_bounding_box, line_width=line_width)
     elif line_choices == 'h':
@@ -358,10 +349,21 @@ def draw(imagefile):
     canvas = ImageDraw.Draw(final)
     canvas.rectangle([0, 0, final.size[0], final.size[1]], fill='white')
     final = Image.alpha_composite(final, out)
-    outfile = os.path.basename(imagefile)
-    final.save("build/" + outfile)
+    outfile = str(uuid.uuid4())[0:5] + '.png' # os.path.basename(imagefile)
 
+    final.save("build/" + outfile)
+    print("open build/" + outfile)
 
 if __name__ == '__main__':
-    imagefile = 'data/books/vindication/0046.png'
-    draw(imagefile)
+    path = 'data/books/vindication'
+    pages = []
+    for f in os.listdir(path):
+        if f != '0000.png' and f != '0001.png':
+            pages.append(f)
+    while True:
+        f = random.choice(pages)
+        imagefile = os.path.join(path, f)
+        print("Procesing " + imagefile)
+        boxes = setup(imagefile)
+        for i in range(0, 100):
+            draw(imagefile, boxes)
