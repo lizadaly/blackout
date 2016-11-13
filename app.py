@@ -89,18 +89,15 @@ def draw_horizontal_lines(draw, boxes, doc_bounding_box, line_width):
             for box in select_boxes:
                 x1 = box.position[0][0] - BOX_PADDING
                 draw_line(draw, [x0, current_y, x1, current_y],
-                          line_width=line_width, boundary_index=0,
-                          wobble_max=1,
+                          line_width=line_width,
                           line_weight_factor=line_weight_factor,
                           dir="h")
                 x0 = box.position[1][0] + BOX_PADDING
             draw_line(draw, [x0 + BOX_PADDING, current_y, end_x, current_y],
-                      wobble_max=1,
-                      line_width=line_width, boundary_index=2, line_weight_factor=line_weight_factor, dir="h")
+                      line_width=line_width, line_weight_factor=line_weight_factor, dir="h")
         else:
             draw_line(draw, [start_x, current_y, end_x, current_y],
                       line_width=line_width, color=color,
-                      wobble_max=1 if adjacent_line else WOBBLE_MAX,
                       line_weight_factor=line_weight_factor,
                       dir="h")
             adjacent_line = False
@@ -109,12 +106,11 @@ def draw_horizontal_lines(draw, boxes, doc_bounding_box, line_width):
 
 
 
-def draw_line(draw, pos, line_width, boundary_index=None, dir="h", color=(0, 0, 0), wobble_max=1, line_weight_factor=1):
+def draw_line(draw, pos, line_width, boundary_index=None, dir="h", color=(0, 0, 0), line_weight_factor=1):
     # Draw a fuzzy line of randomish width repeat times
     repeat = 20
     width = int(line_width) * line_weight_factor
-    default_padding = min([BOX_PADDING / wobble_max if boundary_index else BOX_PADDING, wobble_max])
-    default_padding = 0 if boundary_index else BOX_PADDING
+    default_padding = line_width / 3
 
     # Slide the center of the line down width/2 based on dir
     if dir == 'h':
@@ -159,7 +155,7 @@ def draw_line(draw, pos, line_width, boundary_index=None, dir="h", color=(0, 0, 
             padding = default_padding
         pos[3] = random.uniform(pos[3] - padding, pos[3] + padding)
 
-        opacity = 220 + i
+        opacity = 230 + i
         draw.line(pos, width=width, fill=(*color, opacity))
 
 def get_boxes(imagefile, tool):
@@ -171,99 +167,103 @@ def get_boxes(imagefile, tool):
     return boxes
 
 def image_filter(img):
-    img = img.filter(ImageFilter.SMOOTH_MORE)
-    img = img.filter(ImageFilter.SMOOTH_MORE)
-    img = img.filter(ImageFilter.SMOOTH_MORE)
+    for i in range(10):
+        img = img.filter(ImageFilter.SMOOTH_MORE)
     return img
 
 
 def parse_words(boxes):
     words = []
-    word_box = {}
     for box in boxes:
         word = box.content.strip()
         word = word.translate(str.maketrans({a:None for a in string.punctuation}))
-        words.append(word)
-        # Pick only the first occurrence
-        if not word in word_box:
-            word_box[word] = box
-    sent = ' '.join(words)
+        words.append({'text': word, 'box': box})
+    sent = ' '.join([w['box'].content for w in words])
     doc = nlp(sent)
     for token in doc:
-        if token.text in word_box:
-            word_box[token.text].pos = token.pos_
-            word_box[token.text].token = token
-    return words, word_box
+        for word in words:
+            text = word['text']
+            if token.text == text:
+                word['token'] = token
+                word['pos'] = token.pos_
+    return words
 
 def find_boxes_for_grammar(boxes):
-    words, word_box = parse_words(boxes)
-    grammar = ['DET', 'NOUN', 'VERB', 'NOUN']
+    words = parse_words(boxes)
+    grammars = [
+        ['DET', 'NOUN', 'VERB', 'NOUN'],
+        ['ADJ', 'NOUN', 'VERB', 'NOUN'],
+        ['ADJ', 'NOUN', 'VERB', 'ADV'],
+        ['DET', 'NOUN', 'VERB', 'NOUN', 'CONJ', 'NOUN'],
+    ]
+    grammar = random.choice(grammars)
     picks = []
     word_index = 0
-    prev_pos = None
     prev_word = None
+    prev_pos = None
 
     for pos in grammar:
         while True:
             word = words[word_index]
             if len(picks) > 0:
-                prev_word = picks[-1].content
+                prev_word = picks[-1]
+                prev_pos = prev_word['pos']
             pick_this = True
             if prev_pos == 'DET':
-                if prev_word == 'a' or prev_word == 'an':
+                if prev_word['text'] == 'a' or prev_word['text'] == 'an':
                     # Pick this if it's singular
                     pick_this = not is_plural(word)
-                if prev_word == 'a':
+                if prev_word['text'] == 'a':
                     # Pick this if it doesn't start with a vowel
                     pick_this = not starts_with_vowel(word) and pick_this
-                if prev_word == 'an':
+                if prev_word['text'] == 'an':
                     pick_this = starts_with_vowel(word) and pick_this
-                if prev_word == 'this':
+                if prev_word['text'] == 'this':
                     pick_this = not is_plural(word) and pick_this
-                if prev_word == 'these':
+                if prev_word['text'] == 'these':
                     pick_this = is_plural(word) and pick_this
             if prev_pos == 'NOUN':
                 # If the previous noun was plural, the verb must be plural
-                if is_plural(prev_word[-1]):
+                if is_plural(prev_word):
                     pick_this = is_plural_verb(word) and pick_this
-                if not is_plural(prev_word[-1]):
+                if not is_plural(prev_word):
                     pick_this = not is_plural_verb(word) and pick_this
             if prev_pos == 'VERB':
                 # If the verb was plural, the noun must be
-                if is_plural_verb(prev_word[-1]):
+                if is_plural_verb(prev_word):
                     pick_this = is_plural(word) and pick_this
-                if not is_plural_verb(prev_word[-1]):
+                if not is_plural_verb(prev_word):
                     pick_this = not is_plural(word) and pick_this
             if pos == 'VERB':
                 # Don't pick auxilliary verbs as they won't have a helper
-                pick_this = word_box[word].token.dep_ != 'AUX' and pick_this
+                pick_this = word['token'].dep_ != 'AUX' and pick_this
 
-            if word_box[word].pos == pos and pick_this and random.randint(0, 5) == 0:
-                print("Picking ", word, " ", word_box[word].token.dep_)
-                picks.append(word_box[word])
+            if word['pos'] == pos and pick_this and random.randint(0, 30) == 0:
+                print("Picking ", word['text'], " ", word['token'].dep_)
+                picks.append(word)
                 prev_pos = pos
                 word_index += 1
                 break
 
             word_index += 1
-    return picks
+    return [p['box'] for p in picks]
 
 def is_plural(word):
-    if word == 'men' or word == 'women':  # Special case this since one comes up a lot
+    if word['text'] == 'men' or word['text'] == 'women':  # Special case this since one comes up a lot
         return True
-    return word[-1] == 's'
+    return word['text'][-1] == 's'
 
 def is_plural_verb(word):
-    if word == 'have':
+    if word['text'] == 'have':
         return True
-    return word[-1] != 's'
+    return word['text'][-1] != 's'
 
 def is_present(word):
-    return word[-1] == 's'
+    return word['text'][-1] == 's'
 
 def starts_with_vowel(word):
     vowels = set(['a', 'e', 'i', 'o', 'u'])
-    return word[0] in vowels
+    return word['text'][0] in vowels
 
 def draw(imagefile):
     tool = pyocr.get_available_tools()[0]
