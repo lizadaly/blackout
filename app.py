@@ -3,6 +3,7 @@ import random
 from statistics import mean
 import string
 import uuid
+import sys
 
 import tracery
 import spacy
@@ -352,18 +353,17 @@ def draw(imagefile, boxes):
     outfile = str(uuid.uuid4())[0:5] + '.png' # os.path.basename(imagefile)
 
     final.save("build/" + outfile)
-    print("open build/" + outfile)
 
 if __name__ == '__main__':
-    path = 'data/books/vindication'
+    path = sys.argv[1]
     pages = []
     for f in os.listdir(path):
-        if f != '0000.png' and f != '0001.png':
-            pages.append(f)
+        pages.append(f)
+    num_generations_per_page = 100
     while True:
         f = random.choice(pages)
         imagefile = os.path.join(path, f)
         print("Procesing " + imagefile)
         boxes = setup(imagefile)
-        for i in range(0, 100):
+        for i in range(0, num_generations_per_page):
             draw(imagefile, boxes)
