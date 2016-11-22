@@ -21,10 +21,9 @@ _Blackout_ has produced one creative work:
 
 <img src="https://github.com/lizadaly/blackout/blob/master/images/title.png?raw=true" />
 
-The source material is [A Vindication of the Rights of Women](https://en.wikipedia.org/wiki/A_Vindication_of_the_Rights_of_Woman) by Mary Wollstonecraft.
+The source material is [A Vindication of the Rights of Women](https://en.wikipedia.org/wiki/A_Vindication_of_the_Rights_of_Woman) by Mary Wollstonecraft (1792).
 
-Read [The Days Left Forebodings and Water](https://s3.amazonaws.com/worldwritable/nanogenmo2016-short.pdf). 45 pages long, consists of entries that were generated randomly, but hand-picked and ordered.
-
+Read [The Days Left Forebodings and Water](https://s3.amazonaws.com/worldwritable/nanogenmo2016-short.pdf). 45 pages long, consists of entries that were generated randomly, but hand-picked and ordered on November 9, 2016.
 
 
 <img src="https://github.com/lizadaly/blackout/blob/master/images/1.png?raw=true" />
