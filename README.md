@@ -39,4 +39,4 @@ Read [The Days Left Forebodings and Water](https://s3.amazonaws.com/worldwritabl
 <img src="https://github.com/lizadaly/blackout/blob/master/images/7.png?raw=true" />
 
 
-(The full NaNoGenMo entry of ~50,000 words is a [9.3GB PDF](https://s3.amazonaws.com/worldwritable/nanogenmo2016-9g-long.pdf) of nearly 10,000 pages. *You almost certainly do not want to download it.*)
+(The full NaNoGenMo entry of ~50,000 words was a [9.3GB PDF] of nearly 10,000 pages. If for some reason you want it, just ask.)
