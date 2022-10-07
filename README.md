@@ -15,7 +15,7 @@ _Blackout_ does the following:
 
 Pen width, line length, line direction, number of strokes, and stroke opacity are all randomly fuzzed. The pen color is always black, except in rare cases it is blood red.
 
-_Blackout_ has produced one creative work:
+_Blackout_ has produced two creative works: "The Days Left Forebodings and Water" (this one), and was modified by @samplereality for use in producing ["A Great Intimate Unmistakeable More"](https://github.com/NaNoGenMo/2021/issues/87)
 
 ## "The Days Left Forebodings and Water"
 
