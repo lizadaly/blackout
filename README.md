@@ -19,24 +19,24 @@ _Blackout_ has produced one creative work:
 
 ## "The Days Left Forebodings and Water"
 
-<img src="https://github.com/lizadaly/blackout/blob/master/images/title.png?raw=true" />
+<img src="https://github.com/lizadaly/blackout/blob/main/images/title.png?raw=true" />
 
 The source material is [A Vindication of the Rights of Women](https://en.wikipedia.org/wiki/A_Vindication_of_the_Rights_of_Woman) by Mary Wollstonecraft (1792).
 
 Read [The Days Left Forebodings and Water](https://lizadaly.com/projects/blackout/lizadaly-blackout-nanogenmo-2016.pdf). 45 pages long, consists of entries that were generated randomly, but hand-picked and ordered on November 9, 2016.
 
 
-<img src="https://github.com/lizadaly/blackout/blob/master/images/1.png?raw=true" />
+<img src="https://github.com/lizadaly/blackout/blob/main/images/1.png?raw=true" />
 
-<img src="https://github.com/lizadaly/blackout/blob/master/images/2.png?raw=true" />
+<img src="https://github.com/lizadaly/blackout/blob/main/images/2.png?raw=true" />
 
-<img src="https://github.com/lizadaly/blackout/blob/master/images/3.png?raw=true" />
+<img src="https://github.com/lizadaly/blackout/blob/main/images/3.png?raw=true" />
 
-<img src="https://github.com/lizadaly/blackout/blob/master/images/4.png?raw=true" />
+<img src="https://github.com/lizadaly/blackout/blob/main/images/4.png?raw=true" />
 
-<img src="https://github.com/lizadaly/blackout/blob/master/images/6.png?raw=true" />
+<img src="https://github.com/lizadaly/blackout/blob/main/images/6.png?raw=true" />
 
-<img src="https://github.com/lizadaly/blackout/blob/master/images/7.png?raw=true" />
+<img src="https://github.com/lizadaly/blackout/blob/main/images/7.png?raw=true" />
 
 
 (The full NaNoGenMo entry of ~50,000 words was a [9.3GB PDF] of nearly 10,000 pages. If for some reason you want it, just ask.)
